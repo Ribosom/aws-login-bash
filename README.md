@@ -6,6 +6,11 @@ There are better more secure ways like these:
 
 If this is not possible, and you need a way for legacy tools, you can use this script.
 
+# Prerequisites
+
+aws cli
+jq
+
 # Script
 
 The provided script adds temporary session tokens to the aws credential file, so you don't have to write your permanent secret access key to the aws credential file.

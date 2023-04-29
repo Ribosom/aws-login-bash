@@ -39,6 +39,11 @@ if ! command -v aws >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is not installed or not in your PATH." >&2
+  exit 1
+fi
+
 # Find directory where aws credentials file is located
 if [[ -n "$AWS_SHARED_CREDENTIALS_FILE" ]]; then
   aws_credentials_dir="$(dirname "$AWS_SHARED_CREDENTIALS_FILE")"
@@ -108,16 +113,16 @@ function put_session_token_to_credential_file() {
   read -p "Enter MFA: " token_code
   export AWS_ACCESS_KEY_ID=${aws_access_key_id}
   export AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
-  local session_tokens
-  session_tokens=$(aws sts get-session-token --serial-number "$mfa_serial_arn" --token-code "$token_code" --duration-seconds "$login_session_seconds")
+  local session_token_json
+  session_token_json=$(aws sts get-session-token --serial-number "$mfa_serial_arn" --token-code "$token_code" --duration-seconds "$login_session_seconds")
   # Check if an error occurred during decryption
   if [ $? -ne 0 ]; then
     echo "Error: aws sts get-session-token failed." >&2
     exit 1
   fi
-  local access_key_id=$(echo "$session_tokens" | awk '{print $2}')
-  local secret_access_key=$(echo "$session_tokens" | awk '{print $4}')
-  local session_token=$(echo "$session_tokens" | awk '{print $5}')
+  local access_key_id=$(echo "$session_token_json" | jq -r '.Credentials.AccessKeyId')
+  local secret_access_key=$(echo "$session_token_json" | jq -r '.Credentials.SecretAccessKey')
+  local session_token=$(echo "$session_token_json" | jq -r '.Credentials.SessionToken')
   aws configure set aws_access_key_id "${access_key_id}" --profile "$(get_profile_name)"
   aws configure set aws_secret_access_key "${secret_access_key}" --profile "$(get_profile_name)"
   aws configure set aws_session_token "${session_token}" --profile "$(get_profile_name)"
