@@ -69,26 +69,63 @@ function get_cipher_text_file_path() {
   echo "${aws_credentials_dir}/$(get_cipher_text_file_name)"
 }
 
+function get_profile_name() {
+  echo "${name}-session-token-profile"
+}
+
 function build_cipher_text_file() {
-  # TODO
-  local user
-  read -p "hi" user
+  local aws_access_key_id
+  local aws_secret_access_key
+  local mfa_serial_arn
+  local login_session_seconds
+  local password
+  read -p 'aws_access_key_id: ' aws_access_key_id
+  read -p 'aws_secret_access_key: ' -s aws_secret_access_key
+  echo
+  read -p 'mfa_serial_arn: ' mfa_serial_arn
+  read -p 'login_session_seconds: ' login_session_seconds
+  read -p 'password: ' -s password
+  echo
+  local params="aws_access_key_id=${aws_access_key_id}"$'\n'"aws_secret_access_key=${aws_secret_access_key}"$'\n'"mfa_serial_arn=${mfa_serial_arn}"$'\n'"login_session_seconds=${login_session_seconds}"$'\n'
+  echo "Write file $(get_cipher_text_file_path)"
+  echo "$params" | openssl enc -aes-256-cbc -salt -a -pbkdf2 -iter 1000000 -pass pass:${password} > $(get_cipher_text_file_path)
 }
 
 function put_session_token_to_credential_file() {
-  # TODO
-  echo "hi"
+  local password
+  local token_code
+  local decrypted_content
+  read -p 'Enter password: ' -s password
+  echo "Load file $(get_cipher_text_file_path)"
+  decrypted_content=$(openssl enc -aes-256-cbc -d -a -pbkdf2 -iter 1000000 -pass pass:"${password}" -in "$(get_cipher_text_file_path)")
+  # Check if an error occurred during decryption
+  if [ $? -ne 0 ]; then
+    echo "Error: Decryption failed." >&2
+    exit 1
+  fi
+  # Source the decrypted content
+  source <(echo "$decrypted_content")
+  read -p "Enter MFA: " token_code
+  export AWS_ACCESS_KEY_ID=${aws_access_key_id}
+  export AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
+  local session_tokens
+  session_tokens=$(aws sts get-session-token --serial-number "$mfa_serial_arn" --token-code "$token_code" --duration-seconds "$login_session_seconds")
+  # Check if an error occurred during decryption
+  if [ $? -ne 0 ]; then
+    echo "Error: aws sts get-session-token failed." >&2
+    exit 1
+  fi
+  local access_key_id=$(echo "$session_tokens" | awk '{print $2}')
+  local secret_access_key=$(echo "$session_tokens" | awk '{print $4}')
+  local session_token=$(echo "$session_tokens" | awk '{print $5}')
+  aws configure set aws_access_key_id "${access_key_id}" --profile "$(get_profile_name)"
+  aws configure set aws_secret_access_key "${secret_access_key}" --profile "$(get_profile_name)"
+  aws configure set aws_session_token "${session_token}" --profile "$(get_profile_name)"
+  echo "$(get_profile_name) configured in .aws/credentials"
 }
-
-get_cipher_text_file_path
 
 if [[ -f $(get_cipher_text_file_path) ]]; then
   put_session_token_to_credential_file
 else
   build_cipher_text_file
 fi
-
-read -p "Username: " username
-echo "Blub: ${username}"
-echo "Blub: ${user}"
-echo "The path to the parent directory of the AWS CLI credential file is: $aws_credentials_dir"
