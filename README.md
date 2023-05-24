@@ -17,7 +17,7 @@ The provided script adds temporary session tokens to the aws credential file, so
 For the first run of a new provided name, it will ask for aws_access_key_id, aws_secret_access_key and mfa_serial_arn and encrypt these to a file with a password you provide.
 The file with the encrypted text will be saved next to the credential file as `<name>_ciphertext`.
 
-If you use aws-login.sh again, you will be asked for your password you provided before and then it will get session token from aws and put those in your credential file:
+If you use aws-login.sh again, you will be asked for your password you provided before and then it will get a session token from aws and put those in your credential file:
 
 ```
 [<name>-session-token-profile]
