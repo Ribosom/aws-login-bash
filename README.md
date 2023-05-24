@@ -8,8 +8,8 @@ If this is not possible, and you need a way for legacy tools, you can use this s
 
 # Prerequisites
 
-aws cli
-jq
+* aws cli
+* jq
 
 # Script
 
@@ -19,13 +19,17 @@ The file with the encrypted text will be saved next to the credential file as <n
 
 If you use aws-login.sh again, you will be asked for your password you provided before and then it will get session token from aws and put those in your credential file:
 
+```
 [<name>-session-token-profile]
 aws_access_key_id = *
 aws_secret_access_key = *
 aws_session_token = *
+```
 
 You can also use this profile as a source profile from where you want to switch roles.
 
+```
 [other-profile]
 role_arn=arn:aws:iam::*:role/*
 source_profile=<name>-session-token-profile
+```
