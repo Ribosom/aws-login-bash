@@ -101,6 +101,7 @@ function put_session_token_to_credential_file() {
   local token_code
   local decrypted_content
   read -p 'Enter password: ' -s password
+  echo
   echo "Load file $(get_cipher_text_file_path)"
   decrypted_content=$(openssl enc -aes-256-cbc -d -a -pbkdf2 -iter 1000000 -pass pass:"${password}" -in "$(get_cipher_text_file_path)")
   # Check if an error occurred during decryption
